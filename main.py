@@ -27,12 +27,5 @@ def main():
     logger.info("Rozy Gateway Bot is polling!")
     application.run_polling()
 
-# यह थ्रेड Gunicorn द्वारा चलाए जाने पर बॉट को शुरू करेगा
-bot_thread = Thread(target=main)
-bot_thread.start()
-
-# लोकल टेस्टिंग के लिए, अगर आप सीधे python main.py चलाते हैं
 if __name__ == '__main__':
-    # Gunicorn इस हिस्से को नज़रअंदाज़ कर देगा
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    main()
