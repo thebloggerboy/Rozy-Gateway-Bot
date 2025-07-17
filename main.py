@@ -76,14 +76,16 @@ async def send_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE, 
     keyboard = [join_buttons, [InlineKeyboardButton("✅ Joined", callback_data=f"check_{file_key}")]]
     await update.message.reply_text("Please join our channels first.", reply_markup=InlineKeyboardMarkup(keyboard))
 
+# main.py के अंदर
 async def send_download_options(chat_id: int, context: ContextTypes.DEFAULT_TYPE, file_key: str):
+    # --- यहाँ मुख्य बदलाव है ---
+    # अब हम file_key को सीधे getlink बटन के callback_data में डाल रहे हैं
     keyboard = [
         [InlineKeyboardButton("🎀 Download 🎀", callback_data=f"getlink_{file_key}")],
         [InlineKeyboardButton("Tutorial", url="https://t.me/your_tutorial_link")],
         [InlineKeyboardButton("Premium", url="https://t.me/your_premium_link")]
     ]
     await context.bot.send_message(chat_id=chat_id, text="Click On Download Button", reply_markup=InlineKeyboardMarkup(keyboard))
-
 # --- मुख्य हैंडलर्स ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
@@ -97,25 +99,30 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = [[InlineKeyboardButton("🚀 Go to Main Channel 🚀", url=MAIN_CHANNEL_LINK)]]
         await update.message.reply_text("Welcome! Please use a link from our main channel.", reply_markup=InlineKeyboardMarkup(keyboard))
 
+# main.py के अंदर
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query, user, data = update.callback_query, query.from_user, query.data
     
+    # --- चेक बटन का लॉजिक ---
     if data.startswith("check_"):
         await query.answer()
-        file_key = context.user_data.get('file_key')
-        if not file_key: await query.answer("Something went wrong, please try the main link again.", show_alert=True); return
+        file_key = data.split("_", 1)[1] # हम key को सीधे data से ले रहे हैं
         if await is_user_member(user.id, context):
-            await query.message.delete(); await send_download_options(user.id, context, file_key)
-        else: await query.answer("You haven't joined all channels yet.", show_alert=True)
+            await query.message.delete()
+            await send_download_options(user.id, context, file_key)
+        else:
+            await query.answer("You haven't joined all channels yet.", show_alert=True)
+            
+    # --- गेट लिंक बटन का लॉजिक ---
     elif data.startswith("getlink_"):
         await query.answer()
-        file_key = data.split("_", 1)[1]
+        file_key = data.split("_", 1)[1] # हम key को सीधे data से ले रहे हैं
         token = generate_secure_token(file_key, user.id)
         if token:
             url = f"https://t.me/{WORKER_BOT_USERNAME}?start={token}"
             await query.message.edit_text(f"BELOW IS YOUR LINK:\n\n`{url}`", parse_mode="MarkdownV2")
-        else: await query.message.edit_text("Sorry, could not generate link.")
-
+        else:
+            await query.message.edit_text("Sorry, could not generate link.")
 # --- मुख्य फंक्शन ---
 def main():
     if not all([TOKEN, SUPABASE_URL, SUPABASE_KEY]): logger.critical("Missing env variables!"); return
